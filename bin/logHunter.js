@@ -42,21 +42,23 @@ export class LogHunter {
     }
 
     async #parseLogs(logFileNames) {
+        const xmlParseOption = {
+            mergeAttrs: true,
+            trim: true,
+            normalize: true
+        }
         for (let logFileName of logFileNames) {
-            let fileData = readFileSync(`${LOG_DIRECTORY}\\${logFileName}`); //uncomment for windows and delete above
-            // let fileData = readFileSync(`${LOG_DIRECTORY}/${logFileName}`); //uncomment for mac
-            let xmlParseOption = {
-                mergeAttrs: true,
-                trim: true,
-                normalize: true
-            }
+            // let fileData = readFileSync(`${LOG_DIRECTORY}\\${logFileName}`); //uncomment for windows and delete above
+            let fileData = readFileSync(`${LOG_DIRECTORY}/${logFileName}`); //uncomment for mac
             const parser = new xml2js.Parser(xmlParseOption);
             let { log } = await parser.parseStringPromise(fileData);
             for (let [key, [value]] of Object.entries(log)) {
-                value = removeInvalidTagBrackets(value);
-                value = formatAmpersands(value);
                 try {
-                    if (value.length > 0 && isHtmlLike(value)) log[key] = await parser.parseStringPromise(value);
+                    if (value.length > 0 && isHtmlLike(value)) {
+                        value = removeInvalidTagBrackets(value);
+                        value = formatAmpersands(value);
+                        log[key] = await parser.parseStringPromise(value);
+                    }
                 } catch(e) {
                     debugger
                 }
@@ -67,6 +69,27 @@ export class LogHunter {
                 continue;
             } 
             this.capturedLogs.push(log);
+        }
+        this.#deconstructPreTags();
+    }
+
+    #deconstructPreTags() {
+        for (let log of this.capturedLogs) {
+            for (let key in log) {
+                if (!Array.isArray(log[key])) {
+                    let arr = [];
+                    if (Array.isArray(log[key].pre)) {
+                        log[key].pre.forEach( el => arr.push(el));
+                    } 
+                    else if (typeof log[key].pre === 'string') arr.push(log[key].pre);
+                    else {
+                        for (let innerKey in log[key].pre) {
+                            if (innerKey !== 'br') arr.push(log[key]['pre'][innerKey]);
+                        }
+                    }
+                    log[key] = arr;
+                }
+            }
         }
     }
 }

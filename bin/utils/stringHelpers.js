@@ -35,8 +35,8 @@ export const formatAmpersands = (str) => {
     let ret = str;
     let ampersandIdx = str.indexOf('&');
     while (ampersandIdx !== -1) {
-        ret = replaceAt(ret, ampersandIdx, '&amp;');
-        ampersandIdx = str.indexOf('&');
+        ret = replaceAt(ret, ampersandIdx, '-');
+        ampersandIdx = ret.indexOf('&');
     }
     return ret;
 }
