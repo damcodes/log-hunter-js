@@ -38,7 +38,12 @@ export class LogHunter {
             );
         });
 
-        if (filteredLogFileNames.length) await this.#parseLogs(filteredLogFileNames);
+        if (filteredLogFileNames.length) {
+            await this.#parseLogs(filteredLogFileNames);
+            this.#destructurePreTags();
+            this.#destructureLogSubArrays();
+            this.#dateStrToDateObj();
+        }
     }
 
     async #parseLogs(logFileNames) {
@@ -53,15 +58,15 @@ export class LogHunter {
             const parser = new xml2js.Parser(xmlParseOption);
             let { log } = await parser.parseStringPromise(fileData);
             for (let [key, [value]] of Object.entries(log)) {
-                try {
-                    if (value.length > 0 && isHtmlLike(value)) {
-                        value = removeInvalidTagBrackets(value);
-                        value = formatAmpersands(value);
-                        log[key] = await parser.parseStringPromise(value);
-                    }
-                } catch(e) {
-                    debugger
+                // try {
+                if (value.length > 0 && isHtmlLike(value)) {
+                    value = removeInvalidTagBrackets(value);
+                    value = formatAmpersands(value);
+                    log[key] = await parser.parseStringPromise(value);
                 }
+                // } catch(e) {
+                //     debugger
+                // }
             }
             if (!isBlankOrNull(this.samAcctName)) {
                 if (log.user.some(nciName => nciName === `NCI\\${this.samAcctName}`))
@@ -70,17 +75,14 @@ export class LogHunter {
             } 
             this.capturedLogs.push(log);
         }
-        this.#deconstructPreTags();
     }
 
-    #deconstructPreTags() {
+    #destructurePreTags() {
         for (let log of this.capturedLogs) {
             for (let key in log) {
                 if (!Array.isArray(log[key])) {
                     let arr = [];
-                    if (Array.isArray(log[key].pre)) {
-                        log[key].pre.forEach( el => arr.push(el));
-                    } 
+                    if (Array.isArray(log[key].pre)) log[key].pre.forEach( el => arr.push(el));
                     else if (typeof log[key].pre === 'string') arr.push(log[key].pre);
                     else {
                         for (let innerKey in log[key].pre) {
@@ -91,5 +93,38 @@ export class LogHunter {
                 }
             }
         }
+    }
+
+    #destructureLogSubArrays() {
+        this.capturedLogs = this.capturedLogs.map( log => {
+            for (let key in log) {
+                if (log[key].length === 1) {
+                    if (log[key][0] === '') {
+                        delete log[key];
+                    }
+                    else log[key] = log[key][0];
+                    continue;
+                }
+                log[key] = log[key].flat().map(data => {
+                    const keys = Object.keys(data);
+                    if (typeof data === 'string') return data;
+                    if (!Array.isArray(data) && keys.length) {
+                        let arr = [];
+                        for (const innerKey in data) {
+                            arr.push(data[innerKey]);
+                        }
+                        return arr.length > 1 ? arr.join('|||') : arr[0];
+                    }
+                });
+            }
+            return log;
+        })
+    }
+
+    #dateStrToDateObj() {
+        this.capturedLogs = this.capturedLogs.map(log => {
+            log.dateTime = createDate(log.dateTime, '/');
+            return log;
+        });
     }
 }

@@ -67,10 +67,13 @@ export const QUERY_PARAM_TYPES = {
 export const ACCEPTABLE_TAGS = [
     "pre",
     "span",
-    "br /"
+    "br",
+    "b",
+    "p"
 ]
 
 
+export const LOG_DIRECTORY = "\\\\nci-bis-fs01.nci.ent\\nciapps\\Logs\\CommonLogger";
+// export const LOG_DIRECTORY = "/Users/dam/Development/bakerripley/sampleLogs";
 
-// export const LOG_DIRECTORY = "\\\\nci-bis-fs01.nci.ent\\nciapps\\Logs\\CommonLogger";
-export const LOG_DIRECTORY = "/Users/dam/Development/bakerripley/sampleLogs";
+export const LOGS_TO_WRITE_DIRECTORY = 'C:\\logs';

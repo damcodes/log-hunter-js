@@ -16,17 +16,20 @@ export const formatFileNameDateString = str => {
 /**
  * Accepts date string in format MM-dd-YYYY HH:mm:ss and returns a new Date object
  * @param {String} dateTimeInputStr 
+ * @param {String} dateSeparator - The delimiter for splitting the date part (/ vs -)
  * @returns {Date}
  */
-export const createDate = dateTimeInputStr => {
-    const dateTimeSplit = dateTimeInputStr.split(' ');
+export const createDate = (dateTimeInputStr, dateSeparator = '-', dateTimeSeparator = ' ') => {
+    const dateTimeSplit = dateTimeInputStr.split(dateTimeSeparator);
     const datePart = dateTimeSplit[0];
-    const [ month, day, year ] = datePart.split('-').map( val => parseInt(val));
+    const [ month, day, year ] = datePart.split(dateSeparator).map( val => parseInt(val));
     
     const timePart = dateTimeSplit[1] || null;
     if (!timePart) return new Date(year, month - 1, day, 0, 0, 0);
-    const [ hour, minute, seconds ] = timePart.split(':').map( val => parseInt(val));
+    let [ hour, minute, seconds ] = timePart.split(':').map( val => parseInt(val));
 
+    const amOrPm = dateTimeSplit[2] || null;
+    if (amOrPm && amOrPm === "PM" && hour < 12) hour += 12;
     return new Date(year, month - 1, day, hour, minute || 0, seconds || 0);
 }
 
@@ -48,4 +51,10 @@ export const now = () => {
 
 export const localDateTime = (date) => {
     return `${date.toLocaleDateString() + ' ' + date.toLocaleTimeString()}`
+}
+
+export const formatDateStringForFileName = (date) => {
+    let datePart = date.toISOString().split('T')[0];
+    let timePart = date.toTimeString();
+    return `${datePart}T${timePart.slice(0,2) + timePart.slice(3,5) + timePart.slice(6,8)}`
 }

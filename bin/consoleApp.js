@@ -4,6 +4,7 @@ import { QUERY_PARAMS, QUERY_PARAM_TYPES } from './constants.js';
 import { LogHunter } from './logHunter.js';
 import { isBlankOrNull } from './utils/stringHelpers.js';
 import { createDate, localDateTime } from './utils/dateHelpers.js';
+import { LogChef } from './logChef.js';
 
 export class ConsoleApp {
 
@@ -14,8 +15,10 @@ export class ConsoleApp {
         const hunter = new LogHunter(paramsObj);
         console.log(this.#preQueryReport(hunter));
         await hunter.huntLogs();
-        console.log(`Captured and parsed ${hunter.capturedLogs.length === 1 ? '1 log' : hunter.capturedLogs.length+' logs'}`);
-        console.log(hunter.capturedLogs.slice(0,3));
+        console.log(`Captured and prepped ${hunter.capturedLogs.length === 1 ? '1 log' : hunter.capturedLogs.length+' logs'}`);
+        const chef = new LogChef(hunter.capturedLogs);
+        console.log('Cooking logs!');
+        chef.cookLogs();
 
         const shouldContinueUserInput = (await ConsoleApp.#prompt("Keep hunting? (y/n)\n--> ", false)).toUpperCase();
         return shouldContinueUserInput === "Y";
