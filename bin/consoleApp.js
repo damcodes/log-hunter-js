@@ -16,10 +16,12 @@ export class ConsoleApp {
         console.log(this.#preQueryReport(hunter));
         await hunter.huntLogs();
         console.log(`Captured and prepped ${hunter.capturedLogs.length === 1 ? '1 log' : hunter.capturedLogs.length+' logs'}`);
-        const chef = new LogChef(hunter.capturedLogs);
-        console.log('Cooking logs!');
-        chef.cookLogs();
-
+        if (hunter.capturedLogs.length) {
+            const chef = new LogChef(hunter.capturedLogs);
+            console.log('Cooking logs!');
+            chef.cookLogs();
+        }
+        
         const shouldContinueUserInput = (await ConsoleApp.#prompt("Keep hunting? (y/n)\n--> ", false)).toUpperCase();
         return shouldContinueUserInput === "Y";
     }

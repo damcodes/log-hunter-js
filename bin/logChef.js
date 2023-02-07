@@ -15,11 +15,21 @@ export class LogChef {
     }
 
     cookLogs() {
+        this.#createRequiredDirectories();
+        
+    }
+
+    #createRequiredDirectories() {
         if (!existsSync(LOGS_TO_WRITE_DIRECTORY)) mkdirSync(LOGS_TO_WRITE_DIRECTORY);
-        if (!existsSync(`${LOGS_TO_WRITE_DIRECTORY}\\${this.mainDirectory}`)) mkdirSync(`${LOGS_TO_WRITE_DIRECTORY}\\${this.mainDirectory}`);
-        let dates = this.logsToWrite.map(log => log.dateTime.toLocaleDateString());
+        // const currentReportDir = `${LOGS_TO_WRITE_DIRECTORY}\\${this.mainDirectory}`; //windows
+        // if (!existsSync(`${LOGS_TO_WRITE_DIRECTORY}\\${this.mainDirectory}`)) mkdirSync(`${LOGS_TO_WRITE_DIRECTORY}\\${this.mainDirectory}`); //windows
+        const currentReportDir = `${LOGS_TO_WRITE_DIRECTORY}/${this.mainDirectory}`; //mac
+        if (!existsSync(currentReportDir)) mkdirSync(currentReportDir); //mac
+        let dates = this.logsToWrite.map(log => formatDateStringForFileName(log.dateTime, true));
         let directories = Array.from(new Set(dates));
-        console.log(`For dates:`);
-        console.log(directories);
+        directories.forEach( dirName => {
+            // if (!existsSync(`${currentReportDir}\\${dirName}`)) mkdirSync(`${currentReportDir}\\${dirName}`); //windows
+            if (!existsSync(`${currentReportDir}/${dirName}`)) mkdirSync(`${currentReportDir}/${dirName}`); //mac
+        });
     }
 }

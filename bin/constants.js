@@ -73,7 +73,8 @@ export const ACCEPTABLE_TAGS = [
 ]
 
 
-export const LOG_DIRECTORY = "\\\\nci-bis-fs01.nci.ent\\nciapps\\Logs\\CommonLogger";
-// export const LOG_DIRECTORY = "/Users/dam/Development/bakerripley/sampleLogs";
+// export const LOG_DIRECTORY = "\\\\nci-bis-fs01.nci.ent\\nciapps\\Logs\\CommonLogger";
+export const LOG_DIRECTORY = "/Users/dam/Development/bakerripley/sampleLogs";
 
-export const LOGS_TO_WRITE_DIRECTORY = 'C:\\logs';
+// export const LOGS_TO_WRITE_DIRECTORY = 'C:\\logs';
+export const LOGS_TO_WRITE_DIRECTORY = '/Users/dam/Development/bakerripley/logs';

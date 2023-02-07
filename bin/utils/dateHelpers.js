@@ -34,9 +34,9 @@ export const createDate = (dateTimeInputStr, dateSeparator = '-', dateTimeSepara
 }
 
 /**
-     * 
-     * @returns Date object for 24 hours ago
-     */
+ * 
+ * @returns Date object for 24 hours ago
+ */
 export const yesterday = () => {
     return new Date( (new Date()).getTime() - (24 * 60 * 60 * 1000) );
 }
@@ -49,12 +49,24 @@ export const now = () => {
     return new Date();
 }
 
+/**
+ * 
+ * @param {Date} date 
+ * @returns {String} format: MM/dd/YYYY HH:mm:ss
+ */
 export const localDateTime = (date) => {
     return `${date.toLocaleDateString() + ' ' + date.toLocaleTimeString()}`
 }
 
-export const formatDateStringForFileName = (date) => {
-    let datePart = date.toISOString().split('T')[0];
-    let timePart = date.toTimeString();
-    return `${datePart}T${timePart.slice(0,2) + timePart.slice(3,5) + timePart.slice(6,8)}`
+/**
+ * 
+ * @param {Date} date 
+ * @returns {String} format: YYYY-MM-ddTHHmmss
+ */
+export const formatDateStringForFileName = (date, dateOnly = false) => {
+    const [ month, day, year] = date.toLocaleDateString().split('/');
+    let datePartStr = `${year}-${month.length < 2 ? '0'+month : month}-${day.length < 2 ? '0'+day : day}`
+    if (dateOnly) return datePartStr;
+    const timePartStr = date.toTimeString().split(' ')[0].split(':').join('');
+    return `${datePartStr}T${timePartStr}`;
 }
