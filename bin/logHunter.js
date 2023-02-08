@@ -2,14 +2,14 @@ import * as xml2js from 'xml2js';
 import { readdir, stat, readFile } from 'fs/promises';
 import { LOG_DIRECTORY } from './constants.js';
 import { isBlankOrNull, isHtmlLike, removeInvalidTagBrackets, formatAmpersands } from './utils/stringHelpers.js';
-import { createDate, twenty4HoursAgo, now } from './utils/dateHelpers.js';
+import { createDate, beginningOfYesterday, now, createDateForSort } from './utils/dateHelpers.js';
 
 export class LogHunter {
 
     capturedLogs = [];
     appName = 'All';
     endDate = now();
-    startDate = twenty4HoursAgo(this.endDate);
+    startDate = beginningOfYesterday(this.endDate);
     logLevel = 'All';
     samAcctName = null;
     parsingErrors = [];
@@ -26,7 +26,9 @@ export class LogHunter {
     }
 
     async huntLogs() {
-        const allLogs = await readdir(LOG_DIRECTORY);
+        let allLogs = await readdir(LOG_DIRECTORY);
+        allLogs.sort( (a,b) => createDateForSort(b.split('-')[2].slice(0,8)) - createDateForSort(a.split('-')[2].slice(0,8)));
+        if (this.#isOneDayReport()) allLogs = allLogs.slice(0, Math.floor(allLogs.length / 2)); 
         const filteredLogFileNames = [];
         for (const fileName of allLogs) {
             const logNameParts = fileName.slice(0,-4).split('-');
@@ -160,5 +162,9 @@ export class LogHunter {
             log.dateTime = createDate(log.dateTime, '/');
             return log;
         });
+    }
+
+    #isOneDayReport() {
+        return this.startDate >= (beginningOfYesterday(now()) - 100000);
     }
 }

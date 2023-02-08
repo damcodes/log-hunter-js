@@ -23,10 +23,11 @@ export class ConsoleApp {
             }
         }
         if (hunter.capturedLogs.length) {
-            console.log(`Successfully Captured and prepped ${hunter.capturedLogs.length === 1 ? '1 log' : hunter.capturedLogs.length+' logs'}`);
+            console.log(`Successfully captured and prepped ${hunter.capturedLogs.length === 1 ? '1 log' : hunter.capturedLogs.length+' logs'}...`);
             const chef = new LogChef(hunter.capturedLogs);
-            console.log('Cooking logs!');
-            chef.cookLogs();
+            console.log('Cooking logs...');
+            await chef.cookLogs();
+            console.log('Logs cooked and served!');
         }
         else console.log('0 logs found');
         

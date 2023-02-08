@@ -40,8 +40,20 @@ export const createDate = (dateTimeInputStr, dateSeparator = '-', dateTimeSepara
  * @param {Date} date
  * @returns Date object for 24 hours before date
  */
-export const twenty4HoursAgo = (date) => {
+export const twenty4HoursAgo = date => {
     return new Date( (date).getTime() - (24 * 60 * 60 * 1000) );
+}
+
+/**
+ * 
+ * @param {Date} date 
+ * @returns {Date} Date object for 12:00 AM of day before date
+ */
+export const beginningOfYesterday = date => {
+    const day = date.getDate() - 1;
+    const month = date.getMonth();
+    const year = date.getFullYear();
+    return new Date(year, month, day, 0, 0, 0);
 }
 
 /**
@@ -57,7 +69,7 @@ export const now = () => {
  * @param {Date} date 
  * @returns {String} format: MM/dd/YYYY HH:mm:ss
  */
-export const localDateTime = (date) => {
+export const localDateTime = date => {
     return `${date.toLocaleDateString() + ' ' + date.toLocaleTimeString()}`
 }
 
@@ -72,4 +84,29 @@ export const formatDateStringForDirectoryName = (date, dateOnly = false) => {
     if (dateOnly) return datePartStr;
     const timePartStr = date.toTimeString().split(' ')[0].split(':').join('');
     return `${datePartStr}T${timePartStr}`;
+}
+
+/**
+ * 
+ * @param {String} dateStr - format: YYYYMMdd
+ * @returns {Date} new Date object
+ */
+export const createDateForSort = dateStr => {
+    const year = parseInt(dateStr.slice(0,4));
+    const month = parseInt(dateStr.slice(4,6)) - 1;
+    const day = parseInt(dateStr.slice(6,8));
+    return new Date(year, month, day);
+}
+
+/**
+ * 
+ * @param {Date} date 
+ */
+export const dateToLocalTimeStr = date => {
+    const hours = date.getHours();
+    const minutes = date.getMinutes() < 10 ? `0${date.getMinutes()}` : date.getMinutes();
+    const seconds = date.getSeconds() < 10 ? `0${date.getSeconds()}` : date.getSeconds();
+    return hours >= 12 ? `${hours === 12 ? hours : hours-12}:${minutes}:${seconds} PM` 
+            : 
+            `${hours === 0 ? '12' : hours}:${minutes}:${seconds} AM`;
 }
