@@ -8,7 +8,7 @@ export class LogChef {
     logsToWrite = [];
     fileOutputType = '.txt';
     cookedAt = now();
-    #currentReportDirectoryName = `hunter_${formatDateStringForDirectoryName(this.cookedAt)}`;
+    #currentReportDirectoryName = `${formatDateStringForDirectoryName(this.cookedAt)}`;
 
     constructor(logsToWrite, fileOutputType = null) {
         this.logsToWrite = logsToWrite;

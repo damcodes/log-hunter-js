@@ -82,7 +82,7 @@ export const formatDateStringForDirectoryName = (date, dateOnly = false) => {
     const [ month, day, year] = date.toLocaleDateString().split('/');
     let datePartStr = `${year}-${month.length < 2 ? '0'+month : month}-${day.length < 2 ? '0'+day : day}`
     if (dateOnly) return datePartStr;
-    const timePartStr = date.toTimeString().split(' ')[0].split(':').join('');
+    const timePartStr = date.toTimeString().split(' ')[0].split(':').join('.');
     return `${datePartStr}T${timePartStr}`;
 }
 
