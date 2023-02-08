@@ -1,17 +1,18 @@
 import * as xml2js from 'xml2js';
-import { readdirSync, readFileSync } from 'fs';
+import { readdir, stat, readFile } from 'fs/promises';
 import { LOG_DIRECTORY } from './constants.js';
 import { isBlankOrNull, isHtmlLike, removeInvalidTagBrackets, formatAmpersands } from './utils/stringHelpers.js';
-import { formatFileNameDateString, createDate, yesterday, now } from './utils/dateHelpers.js';
+import { createDate, twenty4HoursAgo, now } from './utils/dateHelpers.js';
 
 export class LogHunter {
 
     capturedLogs = [];
     appName = 'All';
-    startDate = yesterday();
-    endDate = now(); //logic error between endDate and startDate
+    endDate = now();
+    startDate = twenty4HoursAgo(this.endDate);
     logLevel = 'All';
     samAcctName = null;
+    parsingErrors = [];
 
     /**
      * Dynamically creates LogHunter instance and assigns instance 
@@ -25,27 +26,35 @@ export class LogHunter {
     }
 
     async huntLogs() {
-        const allLogs = readdirSync(LOG_DIRECTORY);
-        const filteredLogFileNames = allLogs.filter(file => {
-            const logNameParts = file.slice(0,-4).split('-');
+        const allLogs = await readdir(LOG_DIRECTORY);
+        const filteredLogFileNames = [];
+        for (const fileName of allLogs) {
+            const logNameParts = fileName.slice(0,-4).split('-');
             const [ logAppName, logLevel, logDateStr ] = logNameParts;
-            const formattedLogDateStr = formatFileNameDateString(logDateStr);
-            const logDate = createDate(formattedLogDateStr);
-            return (
-                logDate >= this.startDate && logDate <= this.endDate) && (
-                logLevel === `NCI${this.logLevel}` || this.logLevel === 'All') && (
-                logAppName === this.appName || this.appName === 'All'
-            );
-        });
+            const stats = await stat(`${LOG_DIRECTORY}\\${fileName}`);
+            if (
+                (stats.birthtime >= this.startDate && stats.birthtime <= this.endDate) && (
+                    logLevel === `NCI${this.logLevel}` || this.logLevel === 'All') && (
+                    logAppName === this.appName || this.appName === 'All')
+            ) filteredLogFileNames.push(fileName);
+        }
 
         if (filteredLogFileNames.length) {
             await this.#parseLogs(filteredLogFileNames);
             this.#destructurePreTags();
             this.#destructureLogSubArrays();
-            this.#dateStrToDateObj();
+            this.#logDateStrToDateObj();
+            this.capturedLogs.sort( (a,b) => b.dateTime - a.dateTime);
         }
     }
 
+    /**
+     * Parses the XML of each logFileName passed in. Removes the brackets from
+     * invalid HTML tags from logs passed in by our C# code. Formats ampersands 
+     * to comply with XML required '&amp;' in order for the parser to work. This is 
+     * where log filtering by SAMAccountName is done
+     * @param {String[]} logFileNames 
+     */
     async #parseLogs(logFileNames) {
         const xmlParseOption = {
             mergeAttrs: true,
@@ -53,20 +62,24 @@ export class LogHunter {
             normalize: true
         }
         for (let logFileName of logFileNames) {
-            // let fileData = readFileSync(`${LOG_DIRECTORY}\\${logFileName}`); //uncomment for windows and delete above
-            let fileData = readFileSync(`${LOG_DIRECTORY}/${logFileName}`); //uncomment for mac
+            let fileData = await readFile(`${LOG_DIRECTORY}/${logFileName}`);
             const parser = new xml2js.Parser(xmlParseOption);
             let { log } = await parser.parseStringPromise(fileData);
             for (let [key, [value]] of Object.entries(log)) {
-                // try {
-                if (value.length > 0 && isHtmlLike(value)) {
-                    value = removeInvalidTagBrackets(value);
-                    value = formatAmpersands(value);
-                    log[key] = await parser.parseStringPromise(value);
+                try {
+                    if (value.length > 0 && isHtmlLike(value)) {
+                        value = removeInvalidTagBrackets(value);
+                        value = formatAmpersands(value);
+                        log[key] = await parser.parseStringPromise(value);
+                    }
+                } catch(e) {
+                    let logParsingError = this.parsingErrors.find(logError => logError.logFileName === logFileName);
+                    if (logParsingError) {
+                        logParsingError.errors.push(e.message);
+                    } else {
+                        this.parsingErrors.push({ errors: [e.message], logFileName });
+                    }
                 }
-                // } catch(e) {
-                //     debugger
-                // }
             }
             if (!isBlankOrNull(this.samAcctName)) {
                 if (log.user.some(nciName => nciName === `NCI\\${this.samAcctName}`))
@@ -77,11 +90,15 @@ export class LogHunter {
         }
     }
 
+    /**
+     * After parseLogs(), there was still some sub elements of the object
+     * that needed to be flattened and concatted so object only has depth 1
+     */       
     #destructurePreTags() {
         for (let log of this.capturedLogs) {
             for (let key in log) {
                 if (!Array.isArray(log[key])) {
-                    let arr = [];
+                    const arr = [];
                     if (Array.isArray(log[key].pre)) log[key].pre.forEach( el => arr.push(el));
                     else if (typeof log[key].pre === 'string') arr.push(log[key].pre);
                     else {
@@ -95,6 +112,18 @@ export class LogHunter {
         }
     }
 
+    /**
+     * xml2js parser parses all the XML into a js object with the following structure:
+     * log = {
+     *      data1: ['the data 1'],
+     *      data2: ['the data 2'],
+     *      data3: ['the data 3']
+     * }
+     * Where log.data will always contain an array. That array may contain an empty string,
+     * many strings, or an object with nested tags. This function destructure's the data we need
+     * and flattens them into a singlur string so that log.data will be a string that can be 
+     * formatted and dumped into a text file
+     */
     #destructureLogSubArrays() {
         this.capturedLogs = this.capturedLogs.map( log => {
             for (let key in log) {
@@ -106,8 +135,9 @@ export class LogHunter {
                     continue;
                 }
                 log[key] = log[key].flat().map(data => {
-                    const keys = Object.keys(data);
                     if (typeof data === 'string') return data;
+
+                    const keys = Object.keys(data);
                     if (!Array.isArray(data) && keys.length) {
                         let arr = [];
                         for (const innerKey in data) {
@@ -121,7 +151,11 @@ export class LogHunter {
         })
     }
 
-    #dateStrToDateObj() {
+    /**
+     * xml2js parser parses the datetime stamp of the logs into a string, 
+     * this just converst that to a js Date object
+     */
+    #logDateStrToDateObj() {
         this.capturedLogs = this.capturedLogs.map(log => {
             log.dateTime = createDate(log.dateTime, '/');
             return log;

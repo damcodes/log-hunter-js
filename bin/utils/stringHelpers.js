@@ -8,6 +8,14 @@ export const replaceAt = (str, index, replacement) => {
     return str.substring(0, index) + replacement + str.substring(index + replacement.length);
 }
 
+export const replaceChunkAt = (str, startIdx, endIdx, replacement) => {
+    // return str.substring(0, index) + replacement + str.substring(index + replacement.length);
+    for (let i = startIdx; i < endIdx; i++) {
+        str = replaceAt(str, i, ' ');
+    }
+    return str;
+}
+
 /**
  * Removes <> brackets from non-html tags in our logs so that it can be properly parsed
  * @param {String} xmlString 
@@ -18,8 +26,9 @@ export const removeInvalidTagBrackets = (xmlString) => {
     for (let i = 0; i < xmlString.length - 1; i++) {
         const currentLetter = xmlString[i];
         const nextLetter = xmlString[i+1];
-
-        if (currentLetter === '<' && nextLetter !== "/") {
+        if (ret.slice(i+2, i+9) === "DOCTYPE") 
+            ret = replaceChunkAt(ret, i, ret.slice(i).indexOf('>') + i + 1, ' ');
+        if (currentLetter === '<' && nextLetter !== '/' && nextLetter !== '!') {
             const nextBracketIdx = xmlString.slice(i).indexOf('>');
             const tagName = ret.slice(i + 1, i + nextBracketIdx).split(' ')[0];
             if (!ACCEPTABLE_TAGS.some(tag => tagName === tag)) {

@@ -69,12 +69,26 @@ export const ACCEPTABLE_TAGS = [
     "span",
     "br",
     "b",
-    "p"
+    "p",
+    "head",
+    "meta",
+    "html",
+    "title",
+    "div",
+    "h1",
+    "h2",
+    "h3",
+    "body",
+    "style",
+    "!DOCTYPE",
+    "!--",
+    "fieldset",
+    "center"
 ]
 
 
-// export const LOG_DIRECTORY = "\\\\nci-bis-fs01.nci.ent\\nciapps\\Logs\\CommonLogger";
-export const LOG_DIRECTORY = "/Users/dam/Development/bakerripley/sampleLogs";
+export const LOG_DIRECTORY = "\\\\nci-bis-fs01.nci.ent\\nciapps\\Logs\\CommonLogger";
+// export const LOG_DIRECTORY = "/Users/dam/Development/bakerripley/sampleLogs";
 
-// export const LOGS_TO_WRITE_DIRECTORY = 'C:\\logs';
-export const LOGS_TO_WRITE_DIRECTORY = '/Users/dam/Development/bakerripley/logs';
+export const LOGS_TO_WRITE_DIRECTORY = 'C:\\hunter';
+// export const LOGS_TO_WRITE_DIRECTORY = '/Users/dam/Development/bakerripley/logs';

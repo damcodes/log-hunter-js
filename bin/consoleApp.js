@@ -15,12 +15,20 @@ export class ConsoleApp {
         const hunter = new LogHunter(paramsObj);
         console.log(this.#preQueryReport(hunter));
         await hunter.huntLogs();
-        console.log(`Captured and prepped ${hunter.capturedLogs.length === 1 ? '1 log' : hunter.capturedLogs.length+' logs'}`);
+        if (hunter.parsingErrors.length) {
+            console.log('The following files were not parsed successfully:\n');
+            const errorFileNames = hunter.parsingErrors.map(e => e.logFileName);
+            for (let fileName of errorFileNames) {
+                console.log('\t' + fileName + '\n');
+            }
+        }
         if (hunter.capturedLogs.length) {
+            console.log(`Successfully Captured and prepped ${hunter.capturedLogs.length === 1 ? '1 log' : hunter.capturedLogs.length+' logs'}`);
             const chef = new LogChef(hunter.capturedLogs);
             console.log('Cooking logs!');
             chef.cookLogs();
         }
+        else console.log('0 logs found');
         
         const shouldContinueUserInput = (await ConsoleApp.#prompt("Keep hunting? (y/n)\n--> ", false)).toUpperCase();
         return shouldContinueUserInput === "Y";

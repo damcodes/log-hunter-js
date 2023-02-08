@@ -16,7 +16,10 @@ export const formatFileNameDateString = str => {
 /**
  * Accepts date string in format MM-dd-YYYY HH:mm:ss and returns a new Date object
  * @param {String} dateTimeInputStr 
- * @param {String} dateSeparator - The delimiter for splitting the date part (/ vs -)
+ * @param {String} dateSeparator - The delimiter for splitting the date part (/ vs -),
+ * depends on the format of dateTimeInputStr
+ * @param {String} dateTimeSeparator - The delimiter for splitting date and time, depends on
+ * the format of dateTimeInputStr
  * @returns {Date}
  */
 export const createDate = (dateTimeInputStr, dateSeparator = '-', dateTimeSeparator = ' ') => {
@@ -34,11 +37,11 @@ export const createDate = (dateTimeInputStr, dateSeparator = '-', dateTimeSepara
 }
 
 /**
- * 
- * @returns Date object for 24 hours ago
+ * @param {Date} date
+ * @returns Date object for 24 hours before date
  */
-export const yesterday = () => {
-    return new Date( (new Date()).getTime() - (24 * 60 * 60 * 1000) );
+export const twenty4HoursAgo = (date) => {
+    return new Date( (date).getTime() - (24 * 60 * 60 * 1000) );
 }
 
 /**
@@ -63,7 +66,7 @@ export const localDateTime = (date) => {
  * @param {Date} date 
  * @returns {String} format: YYYY-MM-ddTHHmmss
  */
-export const formatDateStringForFileName = (date, dateOnly = false) => {
+export const formatDateStringForDirectoryName = (date, dateOnly = false) => {
     const [ month, day, year] = date.toLocaleDateString().split('/');
     let datePartStr = `${year}-${month.length < 2 ? '0'+month : month}-${day.length < 2 ? '0'+day : day}`
     if (dateOnly) return datePartStr;
