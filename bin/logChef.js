@@ -8,8 +8,7 @@ export class LogChef {
 
     logsToWrite = [];
     fileOutputType = '.txt';
-    cookedAt = now();
-    currentReportDirectoryName = `${formatDateStringForDirectoryName(this.cookedAt)}`;
+    currentReportDirectoryName = `${formatDateStringForDirectoryName(now())}`;
 
     constructor(logsToWrite, fileOutputType = null) {
         this.logsToWrite = logsToWrite;
@@ -18,37 +17,60 @@ export class LogChef {
 
     async cookLogs() {
         if (!existsSync(LOGS_TO_WRITE_DIRECTORY)) mkdirSync(LOGS_TO_WRITE_DIRECTORY);
-        await this.#createRequiredDirectories();
-    }
-
-    /**
-     * 
-     */
-    async #createRequiredDirectories() {
-        const currentReportDir = `${LOGS_TO_WRITE_DIRECTORY}\\${this.currentReportDirectoryName}`; 
-        if (!existsSync(currentReportDir)) mkdirSync(currentReportDir);
-
-        const logDates = this.logsToWrite.map(log => formatDateStringForDirectoryName(log.dateTime, true));
-        const directoryNamesToCreate = Array.from(new Set(logDates));
-        for (const dirName of directoryNamesToCreate) {
-            if (!existsSync(`${currentReportDir}\\${dirName}`)) mkdirSync(`${currentReportDir}\\${dirName}`);
-            const logsForThisDir = this.logsToWrite.filter( log => dirName === formatDateStringForDirectoryName(log.dateTime, true));
-            const logsByApp = {};
-            for (const log of logsForThisDir) {
-                if (logsByApp[log.app]) logsByApp[log.app].push(log);
-                else logsByApp[log.app] = [ log ];
-            }
-            for (const [appName, logs] of Object.entries(logsByApp)) {
-                const newFilePath = `${currentReportDir}\\${dirName}\\${appName}${this.fileOutputType}`;
+        const currentReportDirPath = `${LOGS_TO_WRITE_DIRECTORY}\\${this.currentReportDirectoryName}`;
+        const createdDirectoryNames = this.#createRequiredDirectories(currentReportDirPath);
+        for (const dirName of createdDirectoryNames) {
+            const logsByDirAndApp = this.#groupLogsByDirectoryAndApp(dirName);
+            for (const [appName, logs] of Object.entries(logsByDirAndApp)) {
+                const newFilePath = `${currentReportDirPath}\\${dirName}\\${appName}${this.fileOutputType}`;
                 await appendFile(newFilePath, `${appName}\n\n`);
                 for (const log of logs) {
-                    await appendFile(newFilePath, this.#formattedLogString(log));
+                    await appendFile(newFilePath, this.#generateLogDataText(log));
                 }
             }
         }
     }
 
-    #formattedLogString(log) {
+    /**
+     * If currentReportPath directory doesn't exist, creates it. Then,
+     * gets the dates for all the logs to be written and creates a directory
+     * for that date.
+     * @param {String} currentReportPath 
+     * @returns {String[]} List of created directory names
+     */
+    #createRequiredDirectories(currentReportPath) {
+        if (!existsSync(currentReportPath)) mkdirSync(currentReportPath);
+        const logDates = this.logsToWrite.map(log => formatDateStringForDirectoryName(log.dateTime, true));
+        const directoryNamesToCreate = Array.from(new Set(logDates));
+        for (const dirName of directoryNamesToCreate) {
+            if (!existsSync(`${currentReportPath}\\${dirName}`)) mkdirSync(`${currentReportPath}\\${dirName}`);
+        }
+        return directoryNamesToCreate;
+    }
+
+    /**
+     * 
+     * @param {String} dirName Format: YYYY-MM-dd
+     * @returns {Object} Object containing log objects grouped by app name and 
+     * directory name (date)
+     */
+    #groupLogsByDirectoryAndApp(dirName) {
+        const logsForThisDir = this.logsToWrite.filter( log => dirName === formatDateStringForDirectoryName(log.dateTime, true));
+        const logsByApp = {};
+        for (const log of logsForThisDir) {
+            if (logsByApp[log.app]) logsByApp[log.app].push(log);
+            else logsByApp[log.app] = [ log ];
+        }
+        return logsByApp;
+    }
+
+    /**
+     * Accepts a log object and generates the string that
+     * will be written to the text file.
+     * @param {Object} log 
+     * @returns {String}
+     */
+    #generateLogDataText(log) {
         const idx = this.logsToWrite.findIndex(log => log === log);
         this.logsToWrite.splice(idx, 1);
         delete log.app;
@@ -95,10 +117,17 @@ export class LogChef {
         return logStr;
     }
 
+    /**
+     * Generates string to be output to text file for log fields that 
+     * hold error information (exception, innerException, message, stackTrace). 
+     * Formats the string on the 'at's and 'in's 
+     * @param {String} str 
+     * @returns {String}
+     */
     #formatOutputString(str) {
-        const nextBreakIdx = (s, start, word = ' at ', regex = /\s*\bat\b\s/g) => {
-            return regex.test(s.slice(start+1)) && s.slice(start+1).indexOf(word) >= 0 ? 
-                s.slice(start+1).indexOf(word) + 1 : -1;
+        const nextBreakIdx = (s, startIdx, word = ' at ', regex = /\s*\bat\b\s/g) => {
+            return regex.test(s.slice(startIdx+1)) && s.slice(startIdx+1).indexOf(word) >= 0 ? 
+                s.slice(startIdx+1).indexOf(word) + 1 : -1;
         }
         const arr = [];
         let startIdx = 0;
