@@ -2,13 +2,14 @@ import { LOGS_TO_WRITE_DIRECTORY } from "./constants.js";
 import { now, formatDateStringForDirectoryName, dateToLocalTimeStr } from "./utils/dateHelpers.js";
 import { existsSync, mkdirSync } from 'fs';
 import { appendFile } from 'fs/promises';
+import { insertAt } from "./utils/stringHelpers.js";
 
 export class LogChef {
 
     logsToWrite = [];
     fileOutputType = '.txt';
     cookedAt = now();
-    #currentReportDirectoryName = `${formatDateStringForDirectoryName(this.cookedAt)}`;
+    currentReportDirectoryName = `${formatDateStringForDirectoryName(this.cookedAt)}`;
 
     constructor(logsToWrite, fileOutputType = null) {
         this.logsToWrite = logsToWrite;
@@ -18,14 +19,13 @@ export class LogChef {
     async cookLogs() {
         if (!existsSync(LOGS_TO_WRITE_DIRECTORY)) mkdirSync(LOGS_TO_WRITE_DIRECTORY);
         await this.#createRequiredDirectories();
-        
     }
 
     /**
      * 
      */
     async #createRequiredDirectories() {
-        const currentReportDir = `${LOGS_TO_WRITE_DIRECTORY}\\${this.#currentReportDirectoryName}`; 
+        const currentReportDir = `${LOGS_TO_WRITE_DIRECTORY}\\${this.currentReportDirectoryName}`; 
         if (!existsSync(currentReportDir)) mkdirSync(currentReportDir);
 
         const logDates = this.logsToWrite.map(log => formatDateStringForDirectoryName(log.dateTime, true));
@@ -49,14 +49,25 @@ export class LogChef {
     }
 
     #formattedLogString(log) {
-        const divider = '------------------------------------------------------------------------------------------------------------------'
+        const idx = this.logsToWrite.findIndex(log => log === log);
+        this.logsToWrite.splice(idx, 1);
+        delete log.app;
+        if (log.ip) delete log.ip;
+        const divider = `
+            ${'-'.padEnd(200, '-')} 
+            ${'-'.padEnd(200, '-')}
+        `;
         const timeStamp = `${'Time:'.padEnd(19)}\t\t\t${dateToLocalTimeStr(log.dateTime)}`;
+        delete log.dateTime;
         const logLevel = `${'Log Severity Level:'.padEnd(19)}\t\t\t${log.logType}`;
+        delete log.logType;
         const user = `${'SAMAccountName:'.padEnd(19)}\t\t\t${log.user}`;
+        delete log.user;
         const hostMachine = `${'Host Machine:'.padEnd(19)}\t\t\t${log.hostMachine}`;
-        // const ip = !!log.ip ? `${'IP:'.padEnd(19)}\t\t\t${log.ip}` : null;
+        delete log.hostMachine;
         const uri = !!log.uri ? `${'URI:'.padEnd(19)}\t\t\t${log.uri}` : null;
-        const logStr = !!uri ? 
+        if (uri) delete log.uri;
+        let logStr = !!uri ? 
         `
             ${divider}
             ${timeStamp}
@@ -64,7 +75,6 @@ export class LogChef {
             ${user}
             ${hostMachine}
             ${uri}
-            ${divider}\n
         ` 
         : 
         `
@@ -73,8 +83,43 @@ export class LogChef {
             ${logLevel}
             ${user}
             ${hostMachine}
-            ${divider}\n
         `;
+        for (const key in log) {
+            logStr += `
+            ${(key.toUpperCase() + ':').padEnd(19)}\t\t\t${this.#formatOutputString(log[key])}
+            `;
+        }
+        logStr += `
+        ${divider}
+        \n`;
         return logStr;
+    }
+
+    #formatOutputString(str) {
+        const nextBreakIdx = (s, start, word = ' at ', regex = /\s*\bat\b\s/g) => {
+            return regex.test(s.slice(start+1)) && s.slice(start+1).indexOf(word) >= 0 ? 
+                s.slice(start+1).indexOf(word) + 1 : -1;
+        }
+        const arr = [];
+        let startIdx = 0;
+        let endIdx = nextBreakIdx(str, startIdx);
+        while (endIdx >= 0) {
+            let segment = str.slice(startIdx, endIdx).trim();
+            if (segment.includes(' in ')) {
+                const inSegmentIdx = segment.indexOf(' in ');
+                segment = insertAt(segment, inSegmentIdx, '\n\t\t\t\t\t\t\t');
+            }
+            arr.push(segment);
+            startIdx = endIdx;
+            endIdx += nextBreakIdx(str, startIdx) !== -1 ? nextBreakIdx(str, startIdx) : -endIdx - 2 ;
+        }
+
+        let finalSegment = str.slice(startIdx).trim();
+        if (finalSegment.includes(' in ')) {
+            const inSegmentIdx = finalSegment.indexOf(' in ');
+            finalSegment = insertAt(finalSegment, inSegmentIdx, '\n\t\t\t\t\t\t\t');
+        }
+        arr.push(finalSegment);
+        return arr.length ? arr.join('\n\t\t\t\t\t\t') : str;
     }
 }

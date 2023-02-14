@@ -9,38 +9,14 @@ export const replaceAt = (str, index, replacement) => {
 }
 
 export const replaceChunkAt = (str, startIdx, endIdx, replacement) => {
-    // return str.substring(0, index) + replacement + str.substring(index + replacement.length);
     for (let i = startIdx; i < endIdx; i++) {
-        str = replaceAt(str, i, ' ');
+        str = replaceAt(str, i, replacement);
     }
     return str;
 }
 
-/**
- * Removes <> brackets from non-html tags in our logs so that it can be properly parsed
- * @param {String} xmlString 
- * @returns {String}
- */
-export const removeInvalidTagBrackets = (xmlString) => {
-    let ret = xmlString;
-    for (let i = 0; i < xmlString.length - 1; i++) {
-        const currentLetter = xmlString[i];
-        const nextLetter = xmlString[i+1];
-        if (ret.slice(i+2, i+9) === "DOCTYPE") 
-            ret = replaceChunkAt(ret, i, ret.slice(i).indexOf('>') + i + 1, ' ');
-        if (currentLetter === '<' && nextLetter !== '/' && nextLetter !== '!') {
-            const nextBracketIdx = xmlString.slice(i).indexOf('>');
-            const tagName = ret.slice(i + 1, i + nextBracketIdx).split(' ')[0];
-            if (!ACCEPTABLE_TAGS.some(tag => tagName === tag)) {
-                const removeBracketIdx = i + nextBracketIdx;
-                ret = replaceAt(ret, i, ' ');
-                ret = replaceAt(ret, removeBracketIdx, ' ');
-                i = removeBracketIdx;
-            }
-        }
-        if (xmlString.slice(i+1).indexOf('<') >= 0) i += xmlString.slice(i+1).indexOf('<');
-    }
-    return ret;
+export const insertAt = (str, startIdx, strToInsert) => {
+    return str.substring(0, startIdx + 1) + strToInsert + str.substring(startIdx+1, str.length);
 }
 
 /**
@@ -52,17 +28,22 @@ export const isHtmlLike = (str) => {
     return /<\/?[a-z][\s\S]*>/i.test(str);
 }
 
-/**
- * Replaces ampersands in an XML string so that it can be parsed properly
- * @param {String} str 
- * @returns {String}
- */
-export const formatAmpersands = (str) => {
-    let ret = str;
-    let ampersandIdx = str.indexOf('&');
-    while (ampersandIdx !== -1) {
-        ret = replaceAt(ret, ampersandIdx, '-');
-        ampersandIdx = ret.indexOf('&');
+export const htmlToString = htmlStr => {
+    let ret = htmlStr;
+    const nextBracketIdx = (str, i, bracketType) => str.slice(i).indexOf(bracketType);
+    for (let i = 0; i < htmlStr.length - 1; i += nextBracketIdx(ret, i, '<') >= 0 ? nextBracketIdx(ret, i, '<') : htmlStr.length - 1) {
+        const currentLetter = ret[i];
+        const nextLetter = ret[i+1];
+        if (currentLetter === '<' || currentLetter + nextLetter === '</') {
+            const nextCloseBracketIdx = nextBracketIdx(ret, i, '>');
+            const tagName = ret.slice(nextLetter === '/' ? i + 2 : i + 1, i + nextCloseBracketIdx).split(' ')[0];
+            const removeBracketIdx = i + nextCloseBracketIdx;
+            if (ACCEPTABLE_TAGS.some(tag => tag === tagName)) {
+                ret = replaceChunkAt(ret, i, removeBracketIdx + 1, ' ');
+            } else {
+                i++
+            }
+        }
     }
-    return ret;
+    return ret.split(/\s{2,}/g).reduce( (prev, next) => prev === ' ' ? next : prev + ' ' + next).trim();
 }

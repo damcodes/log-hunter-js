@@ -1,7 +1,7 @@
 import * as xml2js from 'xml2js';
 import { readdir, stat, readFile } from 'fs/promises';
 import { LOG_DIRECTORY } from './constants.js';
-import { isBlankOrNull, isHtmlLike, removeInvalidTagBrackets, formatAmpersands } from './utils/stringHelpers.js';
+import { isBlankOrNull, isHtmlLike, htmlToString } from './utils/stringHelpers.js';
 import { createDate, beginningOfYesterday, now, createDateForSort } from './utils/dateHelpers.js';
 
 export class LogHunter {
@@ -32,7 +32,7 @@ export class LogHunter {
         const filteredLogFileNames = [];
         for (const fileName of allLogs) {
             const logNameParts = fileName.slice(0,-4).split('-');
-            const [ logAppName, logLevel, logDateStr ] = logNameParts;
+            const [ logAppName, logLevel ] = logNameParts;
             const stats = await stat(`${LOG_DIRECTORY}\\${fileName}`);
             if (
                 (stats.birthtime >= this.startDate && stats.birthtime <= this.endDate) && (
@@ -51,10 +51,9 @@ export class LogHunter {
     }
 
     /**
-     * Parses the XML of each logFileName passed in. Removes the brackets from
-     * invalid HTML tags from logs passed in by our C# code. Formats ampersands 
-     * to comply with XML required '&amp;' in order for the parser to work. This is 
-     * where log filtering by SAMAccountName is done
+     * Parses the XML of each logFileName passed in. Removes HTML tags from 
+     * exceptions, inner exceptions, and stack traces. This is where 
+     * log filtering by SAMAccountName is done
      * @param {String[]} logFileNames 
      */
     async #parseLogs(logFileNames) {
@@ -70,9 +69,9 @@ export class LogHunter {
             for (let [key, [value]] of Object.entries(log)) {
                 try {
                     if (value.length > 0 && isHtmlLike(value)) {
-                        value = removeInvalidTagBrackets(value);
-                        value = formatAmpersands(value);
-                        log[key] = await parser.parseStringPromise(value);
+                        if (['stackTrace','innerException','exception'].some(keyName => key === keyName)) 
+                            log[key] = [htmlToString(value)];
+                        else log[key] = await parser.parseStringPromise(value);
                     }
                 } catch(e) {
                     let logParsingError = this.parsingErrors.find(logError => logError.logFileName === logFileName);
@@ -143,7 +142,7 @@ export class LogHunter {
                     if (!Array.isArray(data) && keys.length) {
                         let arr = [];
                         for (const innerKey in data) {
-                            arr.push(data[innerKey]);
+                            if (innerKey !== 'style') arr.push(data[innerKey]);
                         }
                         return arr.length > 1 ? arr.join('|||') : arr[0];
                     }
@@ -155,7 +154,7 @@ export class LogHunter {
 
     /**
      * xml2js parser parses the datetime stamp of the logs into a string, 
-     * this just converst that to a js Date object
+     * this just converts that to a js Date object
      */
     #logDateStrToDateObj() {
         this.capturedLogs = this.capturedLogs.map(log => {
@@ -165,6 +164,6 @@ export class LogHunter {
     }
 
     #isOneDayReport() {
-        return this.startDate >= (beginningOfYesterday(now()) - 100000);
+        return this.startDate >= (beginningOfYesterday(this.endDate) - 100000);
     }
 }

@@ -27,7 +27,8 @@ export class ConsoleApp {
             const chef = new LogChef(hunter.capturedLogs);
             console.log('Cooking logs...');
             await chef.cookLogs();
-            console.log('Logs cooked and served!');
+            console.log('Logs have been served.');
+            console.log(`Head to C:\\hunter\\${chef.currentReportDirectoryName} to see the completed reports.`);
         }
         else console.log('0 logs found');
         

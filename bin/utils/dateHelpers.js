@@ -37,14 +37,6 @@ export const createDate = (dateTimeInputStr, dateSeparator = '-', dateTimeSepara
 }
 
 /**
- * @param {Date} date
- * @returns Date object for 24 hours before date
- */
-export const twenty4HoursAgo = date => {
-    return new Date( (date).getTime() - (24 * 60 * 60 * 1000) );
-}
-
-/**
  * 
  * @param {Date} date 
  * @returns {Date} Date object for 12:00 AM of day before date
@@ -101,6 +93,7 @@ export const createDateForSort = dateStr => {
 /**
  * 
  * @param {Date} date 
+ * @returns {String} format: HH:MM:ss (AM/PM)
  */
 export const dateToLocalTimeStr = date => {
     const hours = date.getHours();
