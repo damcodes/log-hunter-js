@@ -1,6 +1,6 @@
 import * as readline from 'readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
-import { QUERY_PARAMS, QUERY_PARAM_TYPES } from './constants.js';
+import { QUERY_PARAMS, QUERY_PARAM_TYPES, APP_NAMES, LOG_LEVELS } from './constants.js';
 import { LogHunter } from './logHunter.js';
 import { isBlankOrNull } from './utils/stringHelpers.js';
 import { createDate, localDateTime } from './utils/dateHelpers.js';
@@ -11,7 +11,13 @@ export class ConsoleApp {
     static rl = readline.createInterface({ input, output });
 
     static async run() {
-        const paramsObj = await ConsoleApp.#collectQueryParams();
+        let paramsObj = await ConsoleApp.#collectQueryParams();
+        while (!ConsoleApp.#validateParams(paramsObj)) {
+            ConsoleApp.#failedValidationsScreen();
+            await ConsoleApp.#sleep(10000);
+            paramsObj = await ConsoleApp.#collectQueryParams();
+        }
+
         const hunter = new LogHunter(paramsObj);
         console.log(this.#preQueryReport(hunter));
         await hunter.huntLogs();
@@ -117,6 +123,33 @@ export class ConsoleApp {
                 '---------------------------------------------------\n' +
                 parameterStrings.join('') +
                 '---------------------------------------------------';
+    }
+
+    static #failedValidationsScreen() {
+        console.clear();
+        console.log('One of the following validations failed:');
+        console.log('\t- Select App Number from the menu using it\'s number or enter for default');
+        console.log('\t- Select Log Severity Level from the menu using it\'s number or enter for default');
+        console.log('\t- Start Date must be after 1/1/2023 12:00:00 AM');
+        console.log('\t- End Date must be after 1/1/2023 12:00:00 AM');
+        console.log('\t- Start Date must be before End Date');
+        console.log('Try again')
+    }
+
+    static #validateParams(paramsObj) {
+        const datesAreValid = (startDate, endDate) => {
+            const janFirst2023 = new Date(2023, 0, 1, 0, 0, 0)
+            return (startDate === null && endDate === null) || (startDate === null && (endDate >= new Date(janFirst2023.getTime() + 86400000))) || (endDate === null && startDate >= janFirst2023) ;
+        }
+        const appNameIsValid = (appNameSelection) => (parseInt(appNameSelection) <= APP_NAMES.length && parseInt(appNameSelection) > 0) || appNameSelection === null;
+        const logLevelIsValid = (logLevelSelection) => (parseInt(logLevelSelection) <= LOG_LEVELS.length && parseInt(logLevelSelection) > 0) || logLevelSelection === null;
+        return datesAreValid(paramsObj.startDate, paramsObj.endDate) && appNameIsValid(paramsObj.appName) && logLevelIsValid(paramsObj.logLevel);
+    }
+
+    static #sleep(ms) {
+        return new Promise((resolve) => {
+          setTimeout(resolve, ms);
+        });
     }
 
     static end() {

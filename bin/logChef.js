@@ -9,6 +9,7 @@ export class LogChef {
     logsToWrite = [];
     fileOutputType = '.txt';
     currentReportDirectoryName = `${formatDateStringForDirectoryName(now())}`;
+    cookingErrors = [];
 
     constructor(logsToWrite, fileOutputType = null) {
         this.logsToWrite = logsToWrite;
@@ -25,7 +26,16 @@ export class LogChef {
                 const newFilePath = `${currentReportDirPath}\\${dirName}\\${appName}${this.fileOutputType}`;
                 await appendFile(newFilePath, `${appName}\n\n`);
                 for (const log of logs) {
-                    await appendFile(newFilePath, this.#generateLogDataText(log));
+                    try {
+                        await appendFile(newFilePath, this.#generateLogDataText(log));
+                    } catch(e) {
+                        let logCookingError = this.cookingErrors.find(logError => logError.logFileName === log.logFileName);
+                        if (logCookingError) {
+                            logCookingError.errors.push(e.message);
+                        } else {
+                            this.cookingErrors.push({ errors: [e.message], logFileName: log.logFileName });
+                        }
+                    }
                 }
             }
         }
@@ -83,6 +93,7 @@ export class LogChef {
         delete log.dateTime;
         const logLevel = `${'Log Severity Level:'.padEnd(19)}\t\t\t${log.logType}`;
         delete log.logType;
+        const originalLogFile = `${'Original Log File:'.padEnd(19)}\t\t\t${log.logFileName}`;
         const user = `${'SAMAccountName:'.padEnd(19)}\t\t\t${log.user}`;
         delete log.user;
         const hostMachine = `${'Host Machine:'.padEnd(19)}\t\t\t${log.hostMachine}`;
@@ -93,6 +104,7 @@ export class LogChef {
         `
             ${divider}
             ${timeStamp}
+            ${originalLogFile}
             ${logLevel}
             ${user}
             ${hostMachine}
@@ -102,12 +114,13 @@ export class LogChef {
         `
             ${divider}
             ${timeStamp}
+            ${originalLogFile}
             ${logLevel}
             ${user}
             ${hostMachine}
         `;
         for (const key in log) {
-            logStr += `
+            if (key !== 'logFileName') logStr += `
             ${(key.toUpperCase() + ':').padEnd(19)}\t\t\t${this.#formatOutputString(log[key])}
             `;
         }
@@ -142,7 +155,6 @@ export class LogChef {
             startIdx = endIdx;
             endIdx += nextBreakIdx(str, startIdx) !== -1 ? nextBreakIdx(str, startIdx) : -endIdx - 2 ;
         }
-
         let finalSegment = str.slice(startIdx).trim();
         if (finalSegment.includes(' in ')) {
             const inSegmentIdx = finalSegment.indexOf(' in ');

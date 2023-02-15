@@ -28,7 +28,8 @@ export class LogHunter {
     async huntLogs() {
         let allLogs = await readdir(LOG_DIRECTORY);
         allLogs.sort( (a,b) => createDateForSort(b.split('-')[2].slice(0,8)) - createDateForSort(a.split('-')[2].slice(0,8)));
-        if (this.#isOneDayReport()) allLogs = allLogs.slice(0, Math.floor(allLogs.length / 2)); 
+        /*if (this.#isOneDayReport())*/ 
+        allLogs = allLogs.slice(0, Math.floor(allLogs.length / 3)); 
         const filteredLogFileNames = [];
         for (const fileName of allLogs) {
             const logNameParts = fileName.slice(0,-4).split('-');
@@ -66,6 +67,7 @@ export class LogHunter {
             let fileData = await readFile(`${LOG_DIRECTORY}/${logFileName}`);
             const parser = new xml2js.Parser(xmlParseOption);
             let { log } = await parser.parseStringPromise(fileData);
+            log.logFileName = [logFileName];
             for (let [key, [value]] of Object.entries(log)) {
                 try {
                     if (value.length > 0 && isHtmlLike(value)) {
