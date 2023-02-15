@@ -147,8 +147,8 @@ export class LogChef {
         let endIdx = nextBreakIdx(str, startIdx);
         while (endIdx >= 0) {
             let segment = str.slice(startIdx, endIdx).trim();
-            if (segment.includes(' in ')) {
-                const inSegmentIdx = segment.indexOf(' in ');
+            if (segment.includes(' in C:')) {
+                const inSegmentIdx = segment.indexOf(' in C:');
                 segment = insertAt(segment, inSegmentIdx, '\n\t\t\t\t\t\t\t');
             }
             arr.push(segment);
@@ -156,8 +156,8 @@ export class LogChef {
             endIdx += nextBreakIdx(str, startIdx) !== -1 ? nextBreakIdx(str, startIdx) : -endIdx - 2 ;
         }
         let finalSegment = str.slice(startIdx).trim();
-        if (finalSegment.includes(' in ')) {
-            const inSegmentIdx = finalSegment.indexOf(' in ');
+        if (finalSegment.includes(' in C:')) {
+            const inSegmentIdx = finalSegment.indexOf(' in C:');
             finalSegment = insertAt(finalSegment, inSegmentIdx, '\n\t\t\t\t\t\t\t');
         }
         arr.push(finalSegment);

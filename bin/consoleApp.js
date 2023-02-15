@@ -130,20 +130,25 @@ export class ConsoleApp {
         console.log('One of the following validations failed:');
         console.log('\t- Select App Number from the menu using it\'s number or enter for default');
         console.log('\t- Select Log Severity Level from the menu using it\'s number or enter for default');
-        console.log('\t- Start Date must be after 1/1/2023 12:00:00 AM');
-        console.log('\t- End Date must be after 1/1/2023 12:00:00 AM');
+        console.log('\t- Start Date must be after 12/1/2022 12:00:00 AM');
+        console.log('\t- End Date must be after 12/2/2022 12:00:00 AM');
         console.log('\t- Start Date must be before End Date');
         console.log('Try again')
     }
 
     static #validateParams(paramsObj) {
         const datesAreValid = (startDate, endDate) => {
-            const janFirst2023 = new Date(2023, 0, 1, 0, 0, 0)
-            return (startDate === null && endDate === null) || (startDate === null && (endDate >= new Date(janFirst2023.getTime() + 86400000))) || (endDate === null && startDate >= janFirst2023) ;
+            const decFirst2022 = new Date(2022, 11, 1, 0, 0, 0);
+            return (startDate === null && endDate === null) || 
+                (startDate === null && (endDate >= new Date(decFirst2022.getTime() + 86400000))) || 
+                (endDate === null && startDate >= decFirst2022) ||
+                (!!startDate && !!endDate && startDate >= decFirst2022 && endDate >= new Date(decFirst2022.getTime() + 86400000));
         }
-        const appNameIsValid = (appNameSelection) => (parseInt(appNameSelection) <= APP_NAMES.length && parseInt(appNameSelection) > 0) || appNameSelection === null;
-        const logLevelIsValid = (logLevelSelection) => (parseInt(logLevelSelection) <= LOG_LEVELS.length && parseInt(logLevelSelection) > 0) || logLevelSelection === null;
-        return datesAreValid(paramsObj.startDate, paramsObj.endDate) && appNameIsValid(paramsObj.appName) && logLevelIsValid(paramsObj.logLevel);
+        const appNameIsValid = (appNameSelection) => APP_NAMES.some(appName => appName === appNameSelection) || appNameSelection === null;
+        const logLevelIsValid = (logLevelSelection) => LOG_LEVELS.some(logLevel => logLevel === logLevelSelection) || logLevelSelection === null;
+        return datesAreValid(paramsObj.startDate, paramsObj.endDate) && 
+            appNameIsValid(paramsObj.appName) && 
+            logLevelIsValid(paramsObj.logLevel);
     }
 
     static #sleep(ms) {

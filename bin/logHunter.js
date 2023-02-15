@@ -28,8 +28,7 @@ export class LogHunter {
     async huntLogs() {
         let allLogs = await readdir(LOG_DIRECTORY);
         allLogs.sort( (a,b) => createDateForSort(b.split('-')[2].slice(0,8)) - createDateForSort(a.split('-')[2].slice(0,8)));
-        /*if (this.#isOneDayReport())*/ 
-        allLogs = allLogs.slice(0, Math.floor(allLogs.length / 3)); 
+        allLogs = allLogs.slice(0, Math.floor(allLogs.length / 4)); 
         const filteredLogFileNames = [];
         for (const fileName of allLogs) {
             const logNameParts = fileName.slice(0,-4).split('-');
