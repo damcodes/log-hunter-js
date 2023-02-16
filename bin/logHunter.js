@@ -20,9 +20,11 @@ export class LogHunter {
      * and collected from user input
      * @param {Object} paramsObj 
      */
-    constructor(paramsObj) {
-        let fields = Object.keys(paramsObj);
-        fields.forEach(field => this[field] = paramsObj[field] || this[field]);
+    constructor(paramsObj = null) {
+        if (paramsObj) {
+            const fields = Object.keys(paramsObj);
+            fields.forEach(field => this[field] = paramsObj[field] || this[field]);
+        }
     }
 
     async huntLogs() {

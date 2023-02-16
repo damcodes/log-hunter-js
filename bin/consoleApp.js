@@ -10,15 +10,25 @@ export class ConsoleApp {
 
     static rl = readline.createInterface({ input, output });
 
-    static async run() {
-        let paramsObj = await ConsoleApp.#collectQueryParams();
-        while (!ConsoleApp.#validateParams(paramsObj)) {
-            ConsoleApp.#failedValidationsScreen();
-            await ConsoleApp.#sleep(10000);
-            paramsObj = await ConsoleApp.#collectQueryParams();
+    /**
+     * If isOneDayHunt, will create default LogHunter
+     * @param {Boolean} isOneDayHunt 
+     * @returns {Boolean} Bool for should continue
+     */
+    static async run(isOneDayHunt) {
+        
+        let hunter;
+        if (isOneDayHunt) hunter = new LogHunter();
+        else {
+            let paramsObj = await ConsoleApp.#collectQueryParams();
+            while (!ConsoleApp.#validateParams(paramsObj)) {
+                ConsoleApp.#failedValidationsScreen();
+                await ConsoleApp.#sleep(10000);
+                paramsObj = await ConsoleApp.#collectQueryParams();
+            }
+            hunter = new LogHunter(paramsObj);
         }
 
-        const hunter = new LogHunter(paramsObj);
         console.log(this.#preQueryReport(hunter));
         await hunter.huntLogs();
         if (hunter.parsingErrors.length) {
@@ -38,7 +48,7 @@ export class ConsoleApp {
         }
         else console.log('0 logs found');
         
-        const shouldContinueUserInput = (await ConsoleApp.#prompt("Keep hunting? (y/n)\n--> ", false)).toUpperCase();
+        const shouldContinueUserInput = isOneDayHunt ? "N" : (await ConsoleApp.#prompt("Keep hunting? (y/n)\n--> ", false)).toUpperCase();
         return shouldContinueUserInput === "Y";
     }
 

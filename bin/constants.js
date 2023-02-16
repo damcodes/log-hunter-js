@@ -1,6 +1,7 @@
 export const APP_NAMES = [
     "WeRequest", 
     "WeAccess", 
+    "WeAccessService",
     "EMileage", 
     "ChromeRiver",
     "CobbleStone",
@@ -8,6 +9,7 @@ export const APP_NAMES = [
     "TWISTProvider", 
     "TWISTPaymentDownloadService",
     "Recoupment",
+    "RoomSchedule",
     "UltiProDownloadService",
     "Common.WebSvc",
     "PasswordReset.Web",
@@ -18,7 +20,8 @@ export const APP_NAMES = [
 
 export const LOG_LEVELS = [
     "Error",
-    "Warning"
+    "Warning",
+    "Information"
 ]
 
 export const QUERY_PARAMS = [
