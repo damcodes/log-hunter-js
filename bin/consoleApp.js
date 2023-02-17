@@ -22,8 +22,7 @@ export class ConsoleApp {
         else {
             let paramsObj = await ConsoleApp.#collectQueryParams();
             while (!ConsoleApp.#validateParams(paramsObj)) {
-                ConsoleApp.#failedValidationsScreen();
-                await ConsoleApp.#sleep(10000);
+                await ConsoleApp.#failedValidationsScreen();
                 paramsObj = await ConsoleApp.#collectQueryParams();
             }
             hunter = new LogHunter(paramsObj);
@@ -34,9 +33,7 @@ export class ConsoleApp {
         if (hunter.parsingErrors.length) {
             console.log('The following files were not parsed successfully:\n');
             const errorFileNames = hunter.parsingErrors.map(e => e.logFileName);
-            for (let fileName of errorFileNames) {
-                console.log('\t' + fileName + '\n');
-            }
+            for (let fileName of errorFileNames) console.log('\t' + fileName + '\n');
         }
         if (hunter.capturedLogs.length) {
             console.log(`Successfully captured and prepped ${hunter.capturedLogs.length === 1 ? '1 log' : hunter.capturedLogs.length+' logs'}...`);
@@ -135,7 +132,7 @@ export class ConsoleApp {
                 '---------------------------------------------------';
     }
 
-    static #failedValidationsScreen() {
+    static async #failedValidationsScreen() {
         console.clear();
         console.log('One of the following validations failed:');
         console.log('\t- Select App Number from the menu using it\'s number or enter for default');
@@ -143,7 +140,8 @@ export class ConsoleApp {
         console.log('\t- Start Date must be after 12/1/2022 12:00:00 AM');
         console.log('\t- End Date must be after 12/2/2022 12:00:00 AM');
         console.log('\t- Start Date must be before End Date');
-        console.log('Try again')
+        console.log('Try again');
+        await ConsoleApp.#sleep(10000);
     }
 
     static #validateParams(paramsObj) {

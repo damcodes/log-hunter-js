@@ -30,11 +30,8 @@ export class LogChef {
                         await appendFile(newFilePath, this.#generateLogDataText(log));
                     } catch(e) {
                         let logCookingError = this.cookingErrors.find(logError => logError.logFileName === log.logFileName);
-                        if (logCookingError) {
-                            logCookingError.errors.push(e.message);
-                        } else {
-                            this.cookingErrors.push({ errors: [e.message], logFileName: log.logFileName });
-                        }
+                        if (logCookingError) logCookingError.errors.push(e.message);
+                        else this.cookingErrors.push({ errors: [e.message], logFileName: log.logFileName });
                     }
                 }
             }
