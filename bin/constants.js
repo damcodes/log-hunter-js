@@ -8,6 +8,7 @@ export const APP_NAMES = [
     "TWISTChk.Web", 
     "TWISTProvider", 
     "TWISTPaymentDownloadService",
+    "TWISTScripts",
     "Recoupment",
     "RoomSchedule",
     "UltiProDownloadService",
