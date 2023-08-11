@@ -1,3 +1,6 @@
+export const LOG_DIRECTORY = "\\\\nci-bis-fs01.nci.ent\\nciapps\\Logs\\CommonLogger";
+export const LOGS_TO_WRITE_DIRECTORY = 'C:\\hunter';
+
 export const APP_NAMES = [
     "WeRequest", 
     "WeAccess", 
@@ -25,47 +28,54 @@ export const LOG_LEVELS = [
     "Information"
 ]
 
+export const QUERY_PARAM_TYPES = {
+    SELECT: 1,
+    INPUT: 2
+}
+
 export const QUERY_PARAMS = [
     {
         name: "App Name",
-        type:  1,
+        type:  QUERY_PARAM_TYPES.SELECT,
         isDate: false,
         options: APP_NAMES,
         key: 'appName'
     },
     {
         name: "Log Severity Level",
-        type: 1,
+        type: QUERY_PARAM_TYPES.SELECT,
         isDate: false,
         options: LOG_LEVELS,
         key: 'logLevel'
     },
     {
         name: "Start Date",
-        type: 2,
+        type: QUERY_PARAM_TYPES.INPUT,
         isDate: true,
-        format: "(MM-dd-YYYY HH:mm:ss)",
+        format: "(M-d-YYYY HH:mm:ss)",
         key: 'startDate'
     },
     {
         name: "End Date",
-        type: 2,
+        type: QUERY_PARAM_TYPES.INPUT,
         isDate: true,
-        format: "(MM-dd-YYYY HH:mm:ss)",
+        format: "(M-d-YYYY HH:mm:ss)",
         key: 'endDate'
     },
     {
         name: "SAMAccountName",
-        type: 2,
+        type: QUERY_PARAM_TYPES.INPUT,
         isDate: false,
         key: 'samAcctName'
+    },
+    {
+        name: 'Keywords',
+        type: QUERY_PARAM_TYPES.INPUT,
+        isDate: false,
+        isArray: true,
+        key: 'exceptionMessageKeywords'
     }
 ]
-
-export const QUERY_PARAM_TYPES = {
-    SELECT: 1,
-    INPUT: 2
-}
 
 export const ACCEPTABLE_TAGS = [
     "pre",
@@ -88,7 +98,3 @@ export const ACCEPTABLE_TAGS = [
     "fieldset",
     "center"
 ]
-
-
-export const LOG_DIRECTORY = "\\\\nci-bis-fs01.nci.ent\\nciapps\\Logs\\CommonLogger";
-export const LOGS_TO_WRITE_DIRECTORY = 'C:\\hunter';

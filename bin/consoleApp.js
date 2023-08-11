@@ -71,7 +71,7 @@ export class ConsoleApp {
                         userParamInput = !isBlankOrNull(input) ? createDate(input) : null;
                     } else {
                         input = await ConsoleApp.#prompt(`${param.name}: `);
-                        userParamInput = !isBlankOrNull(input) ? input : null;
+                        userParamInput = !isBlankOrNull(input) ? (param.isArray ? input.split(',').map(keyword => keyword.trim()) : input) : null;
                     }
                     break;
             }
@@ -109,7 +109,7 @@ export class ConsoleApp {
      * @returns selected menu item string
      */
     static #getSelection(menuArr, userSelectionInput) {
-        let idx = parseInt(userSelectionInput) - 1;
+        const idx = parseInt(userSelectionInput) - 1;
         return menuArr[idx];
     }
 
@@ -122,7 +122,7 @@ export class ConsoleApp {
      */
     static #preQueryReport(hunter) {
         console.clear();
-        let parameterStrings = QUERY_PARAMS.map( param => {
+        const parameterStrings = QUERY_PARAMS.map( param => {
             if (param.isDate) return `${param.name}: ${localDateTime(hunter[param.key])}\n`;
             return hunter[param.key] !== null ? `${param.name}: ${hunter[param.key]}\n` : null;
         });

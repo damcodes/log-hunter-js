@@ -1,17 +1,40 @@
 import * as xml2js from 'xml2js';
-import { readdir, stat, readFile } from 'fs/promises';
+import { readdir, readFile } from 'fs/promises';
 import { LOG_DIRECTORY } from './constants.js';
 import { isBlankOrNull, isHtmlLike, htmlToString } from './utils/stringHelpers.js';
-import { createDate, beginningOfYesterday, now, createDateForSort } from './utils/dateHelpers.js';
+import { createDate, beginningOfYesterday, now, createDateFromFileName } from './utils/dateHelpers.js';
 
 export class LogHunter {
 
     capturedLogs = [];
     appName = 'All';
-    endDate = now();
-    startDate = beginningOfYesterday(this.endDate);
     logLevel = 'All';
+
+    /**
+     * @type {Date}
+     */
+    endDate = now();
+
+    /**
+     * @type {Date}
+     */
+    startDate = beginningOfYesterday(this.endDate);
+
+    /**
+     * @type { string | null } 
+     */
     samAcctName = null;
+
+    /**
+     * @type { [] | null }
+     */
+    exceptionMessageKeywords = null;
+
+    /**
+     * @type { [] | null }
+     */
+    filters = null;
+
     parsingErrors = [];
 
     /**
@@ -28,28 +51,17 @@ export class LogHunter {
     }
 
     async huntLogs() {
-        let allLogs = await readdir(LOG_DIRECTORY);
-        allLogs.sort( (a,b) => createDateForSort(b.split('-')[2].slice(0,8)) - createDateForSort(a.split('-')[2].slice(0,8)));
-        allLogs = allLogs.slice(0, Math.floor(allLogs.length / 4)); 
-        const filteredLogFileNames = [];
-        for (const fileName of allLogs) {
-            const logNameParts = fileName.slice(0,-4).split('-');
-            const [ logAppName, logLevel ] = logNameParts;
-            const stats = await stat(`${LOG_DIRECTORY}\\${fileName}`);
-            if (
-                (stats.birthtime >= this.startDate && stats.birthtime <= this.endDate) && (
-                    logLevel === `NCI${this.logLevel}` || this.logLevel === 'All') && (
-                    logAppName === this.appName || this.appName === 'All')
-            ) filteredLogFileNames.push(fileName);
-        }
+        const logs = (await readdir(LOG_DIRECTORY)).filter(fileName => {
+            const logDate = createDateFromFileName(fileName.split('-')[2].slice(0, 8));
+            const [logAppName, logLevel] = fileName.slice(0, -4).split('-');
+            return (logDate >= this.startDate && logDate <= this.endDate) && (logLevel === `NCI${this.logLevel}` || this.logLevel === 'All') && (logAppName === this.appName || this.appName === 'All');
+        });
 
-        if (filteredLogFileNames.length) {
-            await this.#parseLogs(filteredLogFileNames);
-            this.#destructurePreTags();
-            this.#destructureLogSubArrays();
-            this.#logDateStrToDateObj();
-            this.capturedLogs.sort( (a,b) => b.dateTime - a.dateTime);
-        }
+        if (logs.length)
+            (await this.#parseLogs(logs))
+                .#destructurePreTags()
+                .#flattenSubArrays()
+                .#sortLogs();
     }
 
     /**
@@ -57,6 +69,7 @@ export class LogHunter {
      * exceptions, inner exceptions, and stack traces. This is where 
      * log filtering by SAMAccountName is done
      * @param {String[]} logFileNames 
+     * @returns {Promise<this>} 
      */
     async #parseLogs(logFileNames) {
         const xmlParseOption = {
@@ -65,45 +78,43 @@ export class LogHunter {
             normalize: true
         }
         for (let logFileName of logFileNames) {
-            let fileData = await readFile(`${LOG_DIRECTORY}/${logFileName}`);
+            const fileData = await readFile(`${LOG_DIRECTORY}/${logFileName}`);
             const parser = new xml2js.Parser(xmlParseOption);
-            let { log } = await parser.parseStringPromise(fileData);
+            const { log } = await parser.parseStringPromise(fileData);
             log.logFileName = [logFileName];
             for (let [key, [value]] of Object.entries(log)) {
                 try {
                     if (value.length > 0 && isHtmlLike(value)) {
-                        if (['stackTrace','innerException','exception'].some(keyName => key === keyName)) 
+                        if (['stackTrace', 'innerException', 'exception'].some(keyName => key === keyName))
                             log[key] = [htmlToString(value)];
                         else log[key] = await parser.parseStringPromise(value);
                     }
-                } catch(e) {
-                    let logParsingError = this.parsingErrors.find(logError => logError.logFileName === logFileName);
-                    if (logParsingError) {
-                        logParsingError.errors.push(e.message);
-                    } else {
-                        this.parsingErrors.push({ errors: [e.message], logFileName });
-                    }
+                } catch (e) {
+                    const logParsingError = this.parsingErrors.find(logError => logError.logFileName === logFileName);
+                    if (logParsingError) logParsingError.errors.push(e.message);
+                    else this.parsingErrors.push({ errors: [e.message], logFileName });
                 }
             }
-            if (!isBlankOrNull(this.samAcctName)) {
-                if (log.user.some(nciName => nciName === `NCI\\${this.samAcctName}`))
+            if (!this.#hasFilters()) 
+                this.capturedLogs.push(log);
+            else 
+                if (this.#satisfiesFilters(log))
                     this.capturedLogs.push(log);
-                continue;
-            } 
-            this.capturedLogs.push(log);
         }
+        return this;
     }
 
     /**
      * After parseLogs(), there was still some sub elements of the object
      * that needed to be flattened and concatted so object only has depth 1
-     */       
+     * @returns {this}
+     */
     #destructurePreTags() {
         for (let log of this.capturedLogs) {
             for (let key in log) {
                 if (!Array.isArray(log[key])) {
                     const arr = [];
-                    if (Array.isArray(log[key].pre)) log[key].pre.forEach( el => arr.push(el));
+                    if (Array.isArray(log[key].pre)) log[key].pre.forEach(el => arr.push(el));
                     else if (typeof log[key].pre === 'string') arr.push(log[key].pre);
                     else {
                         for (let innerKey in log[key].pre) {
@@ -114,6 +125,7 @@ export class LogHunter {
                 }
             }
         }
+        return this;
     }
 
     /**
@@ -127,9 +139,10 @@ export class LogHunter {
      * many strings, or an object with nested tags. This function destructure's the data we need
      * and flattens them into a singlur string so that log.data will be a string that can be 
      * formatted and dumped into a text file
+     * @returns {this}
      */
-    #destructureLogSubArrays() {
-        this.capturedLogs = this.capturedLogs.map( log => {
+    #flattenSubArrays() {
+        this.capturedLogs = this.capturedLogs.map(log => {
             for (let key in log) {
                 if (log[key].length === 1) {
                     if (log[key][0] === '') {
@@ -152,21 +165,56 @@ export class LogHunter {
                 });
             }
             return log;
-        })
+        });
+        return this;
     }
 
     /**
      * xml2js parser parses the datetime stamp of the logs into a string, 
      * this just converts that to a js Date object
+     * @returns {this}
      */
-    #logDateStrToDateObj() {
+    #sortLogs() {
         this.capturedLogs = this.capturedLogs.map(log => {
             log.dateTime = createDate(log.dateTime, '/');
             return log;
-        });
+        }).sort((a, b) => b.dateTime - a.dateTime);
+        return this;
     }
 
-    #isOneDayReport() {
-        return this.startDate >= (beginningOfYesterday(this.endDate) - 100000);
+    /**
+     * @returns {Boolean}
+     */
+    #hasFilters() {
+        const filters = [this.samAcctName, this.exceptionMessageKeywords].filter(prop => prop !== null);
+        this.filters = filters.map(propVal => {
+            const instanceInfo = Object.entries(this);
+            const filterKeyValPair = instanceInfo.find(keyValPair => keyValPair[1] === propVal);
+            return filterKeyValPair[0];
+        });
+        return this.filters.length > 0;
+    }
+
+    /**
+     * 
+     * @param {Object} log The log object to test against filters
+     * @returns {Boolean}
+     */
+    #satisfiesFilters(log) {
+        return this.filters.every(propertyKey => {
+            switch (propertyKey) {
+                case "samAcctName":
+                    return log.user.some(nciName => nciName === `NCI\\${this.samAcctName}`);
+                case "exceptionMessageKeywords":
+                    return [log.exception, log.innerException]
+                        .filter(potentialExceptionArray => potentialExceptionArray !== null && potentialExceptionArray !== undefined && potentialExceptionArray.length)
+                        .some(exceptionMessageArray => this.exceptionMessageKeywords.some(
+                            searchedKeyword => exceptionMessageArray.some(
+                                exceptionMessage => exceptionMessage.includes(searchedKeyword)
+                            )                                
+                        )
+                    );
+            };
+        });
     }
 }
