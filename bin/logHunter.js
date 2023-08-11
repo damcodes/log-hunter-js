@@ -31,6 +31,11 @@ export class LogHunter {
     exceptionMessageKeywords = null;
 
     /**
+     * @type { [] | null}
+     */
+    stackTraceKeywords = null;
+
+    /**
      * @type { [] | null }
      */
     filters = null;
@@ -186,7 +191,7 @@ export class LogHunter {
      * @returns {Boolean}
      */
     #hasFilters() {
-        const filters = [this.samAcctName, this.exceptionMessageKeywords].filter(prop => prop !== null);
+        const filters = [this.samAcctName, this.exceptionMessageKeywords, this.stackTraceKeywords].filter(prop => prop !== null);
         this.filters = filters.map(propVal => {
             const instanceInfo = Object.entries(this);
             const filterKeyValPair = instanceInfo.find(keyValPair => keyValPair[1] === propVal);
@@ -212,8 +217,13 @@ export class LogHunter {
                             searchedKeyword => exceptionMessageArray.some(
                                 exceptionMessage => exceptionMessage.includes(searchedKeyword)
                             )                                
-                        )
-                    );
+                        ));
+                case "stackTraceKeywords":
+                    return log.stackTrace !== null && log.stackTrace !== undefined ? log.stackTrace
+                        .filter(potentialStackTraceArray => potentialStackTraceArray !== null && potentialStackTraceArray !== undefined && potentialStackTraceArray.length)
+                        .some(stackTrace => this.stackTraceKeywords.some(
+                            searchedKeyword => stackTrace.includes(searchedKeyword)
+                        )) : false;
             };
         });
     }

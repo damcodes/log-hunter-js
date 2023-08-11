@@ -69,11 +69,18 @@ export const QUERY_PARAMS = [
         key: 'samAcctName'
     },
     {
-        name: 'Keywords',
+        name: 'Exception Keywords',
         type: QUERY_PARAM_TYPES.INPUT,
         isDate: false,
         isArray: true,
         key: 'exceptionMessageKeywords'
+    },
+    {
+        name: 'Stack Trace Keywords',
+        type: QUERY_PARAM_TYPES.INPUT,
+        isDate: false,
+        isArray: true,
+        key: 'stackTraceKeywords'
     }
 ]
 
