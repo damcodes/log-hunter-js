@@ -38,14 +38,14 @@ export class ConsoleApp {
         if (hunter.capturedLogs.length) {
             console.log(`Successfully captured and prepped ${hunter.capturedLogs.length === 1 ? '1 log' : hunter.capturedLogs.length+' logs'}...`);
             const chef = new LogChef(hunter.capturedLogs);
-            console.log('Cooking logs...');
+            console.log('Cooking logs...\n');
             await chef.cookLogs();
             console.log('Logs have been served.');
-            console.log(`Head to C:\\hunter\\${chef.currentReportDirectoryName} to see the completed reports.`);
+            console.log(`Head to C:\\hunter\\${chef.currentReportDirectoryName} to see the completed reports.\n`);
         }
         else console.log('0 logs found');
         
-        const shouldContinueUserInput = isOneDayHunt ? "N" : (await ConsoleApp.#prompt("Keep hunting? (y/n)\n--> ", false)).toUpperCase();
+        const shouldContinueUserInput = isOneDayHunt ? "N" : (await ConsoleApp.#prompt("Another hunt? (y/n)\n--> ", false)).toUpperCase();
         return shouldContinueUserInput === "Y";
     }
 

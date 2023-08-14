@@ -188,6 +188,8 @@ export class LogHunter {
     }
 
     /**
+     * Checks if the user provided input for samAcctName or keywords for exception messages or stacktrace
+     * and dynamically determines which filters the user provided
      * @returns {Boolean}
      */
     #hasFilters() {
@@ -209,22 +211,22 @@ export class LogHunter {
         return this.filters.every(propertyKey => {
             switch (propertyKey) {
                 case "samAcctName":
-                    return log.user.some(nciName => nciName === `NCI\\${this.samAcctName}`);
+                    return log.user.some(nciName => nciName.toLowerCase() === `nci\\${this.samAcctName}`);
                 case "exceptionMessageKeywords":
                     return [log.exception, log.innerException]
                         .filter(potentialExceptionArray => potentialExceptionArray !== null && potentialExceptionArray !== undefined && potentialExceptionArray.length)
                         .some(exceptionMessageArray => this.exceptionMessageKeywords.some(
                             searchedKeyword => exceptionMessageArray.some(
-                                exceptionMessage => exceptionMessage.includes(searchedKeyword)
+                                exceptionMessage => exceptionMessage.toLowerCase().includes(searchedKeyword.toLowerCase())
                             )                                
                         ));
                 case "stackTraceKeywords":
                     return log.stackTrace !== null && log.stackTrace !== undefined ? log.stackTrace
                         .filter(potentialStackTraceArray => potentialStackTraceArray !== null && potentialStackTraceArray !== undefined && potentialStackTraceArray.length)
                         .some(stackTrace => this.stackTraceKeywords.some(
-                            searchedKeyword => stackTrace.includes(searchedKeyword)
+                            searchedKeyword => stackTrace.toLowerCase().includes(searchedKeyword.toLowerCase())
                         )) : false;
             };
-        });
+        }); 
     }
 }
