@@ -15,10 +15,6 @@ export const replaceChunkAt = (str, startIdx, endIdx, replacement) => {
     return str;
 }
 
-export const insertAt = (str, startIdx, strToInsert) => {
-    return str.substring(0, startIdx + 1) + strToInsert + str.substring(startIdx+1, str.length);
-}
-
 /**
  * Determines whether a string contains HTML/XML like content
  * @param {String} str 
@@ -47,3 +43,7 @@ export const htmlToString = htmlStr => {
     }
     return ret.split(/\s{2,}/g).reduce( (prev, next) => prev === ' ' ? next : prev + ' ' + next).trim();
 }
+
+export const insertAtStart = (targetStr, strToInsert) => strToInsert + targetStr;
+
+export const indexFromEnd = (targetStr, searchStr) => (targetStr.length - 1) - targetStr.split('').reverse().indexOf(searchStr); 

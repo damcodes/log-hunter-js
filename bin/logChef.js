@@ -2,7 +2,7 @@ import { LOGS_TO_WRITE_DIRECTORY } from "./constants.js";
 import { now, formatDateStringForDirectoryName, dateToLocalTimeStr } from "./utils/dateHelpers.js";
 import { existsSync, mkdirSync } from 'fs';
 import { appendFile } from 'fs/promises';
-import { insertAt } from "./utils/stringHelpers.js";
+import { insertAtStart, indexFromEnd } from "./utils/stringHelpers.js";
 
 export class LogChef {
 
@@ -62,11 +62,11 @@ export class LogChef {
      * directory name (date)
      */
     #groupLogsByDirectoryAndApp(dirName) {
-        const logsForThisDir = this.logsToWrite.filter( log => dirName === formatDateStringForDirectoryName(log.dateTime, true));
+        const logsForThisDir = this.logsToWrite.filter(log => dirName === formatDateStringForDirectoryName(log.dateTime, true));
         const logsByApp = {};
         for (const log of logsForThisDir) {
             if (logsByApp[log.app]) logsByApp[log.app].push(log);
-            else logsByApp[log.app] = [ log ];
+            else logsByApp[log.app] = [log];
         }
         return logsByApp;
     }
@@ -97,8 +97,8 @@ export class LogChef {
         delete log.hostMachine;
         const uri = !!log.uri ? `${'URI:'.padEnd(19)}\t\t\t${log.uri}` : null;
         if (uri) delete log.uri;
-        let logStr = !!uri ? 
-        `
+        let logStr = !!uri ?
+            `
             ${divider}
             ${timeStamp}
             ${originalLogFile}
@@ -106,9 +106,9 @@ export class LogChef {
             ${user}
             ${hostMachine}
             ${uri}
-        ` 
-        : 
         `
+            :
+            `
             ${divider}
             ${timeStamp}
             ${originalLogFile}
@@ -116,15 +116,13 @@ export class LogChef {
             ${user}
             ${hostMachine}
         `;
-        for (const key in log) {
-            if (key !== 'logFileName') logStr += `
-            ${(key.toUpperCase() + ':').padEnd(19)}\t\t\t${this.#formatOutputString(log[key])}
-            `;
-        }
-        logStr += `
+        for (const key in log)
+            if (key !== 'logFileName')
+                logStr += `\n\t\t${(key.toUpperCase() + ':').padEnd(19)}\t\t\t${this.#formatOutputString(log[key])}\n`;
+
+        return logStr += `
         ${divider}
         \n`;
-        return logStr;
     }
 
     /**
@@ -135,29 +133,46 @@ export class LogChef {
      * @returns {String}
      */
     #formatOutputString(str) {
-        const nextBreakIdx = (s, startIdx, word = ' at ', regex = /\s*\bat\b\s/g) => {
-            return regex.test(s.slice(startIdx+1)) && s.slice(startIdx+1).indexOf(word) >= 0 ? 
-                s.slice(startIdx+1).indexOf(word) + 1 : -1;
-        }
         const arr = [];
         let startIdx = 0;
-        let endIdx = nextBreakIdx(str, startIdx);
+        let endIdx = this.#nextBreakIdx(str, startIdx + 1);
+        if (endIdx < 0 && str.length > 170) arr.push(...this.#splitAndFormatStringAt(170, str));
         while (endIdx >= 0) {
             let segment = str.slice(startIdx, endIdx).trim();
-            if (segment.includes(' in C:')) {
-                const inSegmentIdx = segment.indexOf(' in C:');
-                segment = insertAt(segment, inSegmentIdx, '\n\t\t\t\t\t\t\t');
-            }
-            arr.push(segment);
+            if (segment.slice(0, 6).includes('in C:')) segment = insertAtStart(segment, '>>>\t');
+            if (segment.length > 170) arr.push(...this.#splitAndFormatStringAt(170, segment));
+            else arr.push(segment);
             startIdx = endIdx;
-            endIdx += nextBreakIdx(str, startIdx) !== -1 ? nextBreakIdx(str, startIdx) : -endIdx - 2 ;
+            endIdx += this.#nextBreakIdx(str, startIdx + 1) > -1 ? this.#nextBreakIdx(str, startIdx + 1) : -endIdx - 2;
         }
-        let finalSegment = str.slice(startIdx).trim();
-        if (finalSegment.includes(' in C:')) {
-            const inSegmentIdx = finalSegment.indexOf(' in C:');
-            finalSegment = insertAt(finalSegment, inSegmentIdx, '\n\t\t\t\t\t\t\t');
-        }
-        arr.push(finalSegment);
-        return arr.length ? arr.join('\n\t\t\t\t\t\t') : str;
+        return arr.length ? arr.join('\n\t\t\t\t\t\t\t\t') : str;
+    }
+
+    /**
+     * Finds the index of the next place to break strToSearch. Breaks when finds the next 'at ' or 'in C:'
+     * @param {String} strToSearch the string being searched
+     * @param {Number} startIdx where to start the search in 
+     * @returns {Number} index of the next occurance or -1
+     */
+    #nextBreakIdx(strToSearch, startIdx) {
+        const targetStrings = ['at ', 'in C:'];
+        const regexs = [/\b\s*at\s+/, /\b\s*in C:\s*/];
+        const atIdx = regexs[0].test(strToSearch.slice(startIdx)) && strToSearch.slice(startIdx).indexOf(targetStrings[0]) >= 0 ?
+            strToSearch.slice(startIdx).indexOf(targetStrings[0]) + 1 : -1;
+        const inIdx = regexs[1].test(strToSearch.slice(startIdx)) && strToSearch.slice(startIdx).indexOf(targetStrings[1]) >= 0 ?
+            strToSearch.slice(startIdx).indexOf(targetStrings[1]) + 1 : -1;
+        return atIdx >= 0 && inIdx >= 0 ? Math.min(atIdx, inIdx) : Math.max(atIdx, inIdx);
+    }
+
+    /** 
+     * @param {Number} maxStringLength Where you want to split targetStr at. Will search backwards for the first space to split at
+     * @param {String} targetStr 
+     * @returns {String[]} The split string as a two element array with the second element formatted with an indent
+     */
+    #splitAndFormatStringAt(maxStringLength, targetStr) {
+        const firstSpaceIdxAfterMax = indexFromEnd(targetStr.trim().slice(0, maxStringLength), ' ');
+        const seg1 = targetStr.slice(0, firstSpaceIdxAfterMax).trim();
+        const seg2 = insertAtStart(targetStr.slice(firstSpaceIdxAfterMax).trim(), '\t');
+        return [seg1, seg2];
     }
 }
