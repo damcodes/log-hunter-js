@@ -7,6 +7,7 @@ export const APP_NAMES = [
     "WeAccessService",
     "EMileage", 
     "ChromeRiver",
+    "ChasePaymentUploadService",
     "CobbleStone",
     "TWISTChk.Web", 
     "TWISTProvider", 
